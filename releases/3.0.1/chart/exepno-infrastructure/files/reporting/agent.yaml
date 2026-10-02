@@ -1,0 +1,11 @@
+metrics:
+  - name: exepno-infrastructure.endpoints.bisees-public.cloud.goog/cpu_per_second
+    type: double
+    passthrough: {}
+    endpoints:
+      - name: local_disk
+endpoints:
+  - name: local_disk
+    disk:
+      reportDir: /reports
+      expireSeconds: 31536000

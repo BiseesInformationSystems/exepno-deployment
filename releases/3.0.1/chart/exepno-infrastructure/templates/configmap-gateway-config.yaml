@@ -1,0 +1,17 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": {{ printf "%s-gateway-config" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    }
+  },
+  "data": {
+    "nginx.conf": {{ include "exepno.gatewayConfig" . | toJson }}
+  }
+}

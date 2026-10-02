@@ -1,0 +1,142 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": {{ printf "%s-frontend" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    }
+  },
+  "spec": {
+    "replicas": 1,
+    "progressDeadlineSeconds": 1800,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "frontend",
+        "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "frontend",
+          "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+          "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "initContainers": {{ include "exepno.bootstrapGate" . }},
+        "containers": [
+          {
+            "name": "frontend",
+            "image": {{ index .Values "components" "frontend" "image" | toJson }},
+            "imagePullPolicy": "IfNotPresent",
+            "ports": [
+              {
+                "containerPort": 3000
+              }
+            ],
+            "resources": {{ index .Values "components" "frontend" "resources" | toJson }},
+            "command": [
+              "node",
+              "/app/node_modules/next/dist/bin/next",
+              "start",
+              "-H",
+              "0.0.0.0",
+              "-p",
+              "3000"
+            ],
+            "envFrom": [
+              {
+                "secretRef": {
+                  "name": {{ index .Values "existingSecrets" "runtime" | toJson }}
+                }
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "tmp",
+                "mountPath": "/tmp"
+              },
+              {
+                "name": "next-cache",
+                "mountPath": "/app/.next/cache"
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "port": 3000,
+                "path": "/login"
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 3,
+              "failureThreshold": 6
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "env": [
+              {
+                "name": "EXEPNO_CREDIT_MODE",
+                "value": "customer_keys"
+              },
+              {
+                "name": "MINIO_ENDPOINT",
+                "value": {{ printf "%s-minio" .Release.Name | toJson }}
+              },
+              {
+                "name": "QDRANT_HOST",
+                "value": {{ printf "%s-qdrant" .Release.Name | toJson }}
+              }
+            ]
+          }
+        ],
+        "terminationGracePeriodSeconds": 60,
+        "volumes": [
+          {
+            "name": "bootstrap-code",
+            "configMap": {
+              "name": {{ include "exepno.bootstrapConfig" . | toJson }}
+            }
+          },
+          {
+            "name": "tmp",
+            "emptyDir": {
+              "sizeLimit": "256Mi"
+            }
+          },
+          {
+            "name": "next-cache",
+            "emptyDir": {
+              "sizeLimit": "512Mi"
+            }
+          }
+        ],
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 1000,
+          "runAsGroup": 1000,
+          "fsGroup": 1000,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "serviceAccountName": {{ index .Values "serviceAccount" "name" | toJson }}
+      }
+    }
+  }
+}

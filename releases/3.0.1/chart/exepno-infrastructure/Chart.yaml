@@ -1,0 +1,6 @@
+apiVersion: v2
+name: exepno-infrastructure
+type: application
+version: "3.0.1"
+appVersion: "3.0.1"
+description: Private Marketplace deployer engineering candidate

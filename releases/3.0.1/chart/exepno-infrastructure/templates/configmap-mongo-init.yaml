@@ -1,0 +1,17 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": {{ printf "%s-mongo-init" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    }
+  },
+  "data": {
+    "01-app-user.js": "db.getSiblingDB(\"exepno\").createUser({user:\"exepno\",pwd:process.env.MONGO_APP_PASSWORD,roles:[{role:\"readWrite\",db:\"exepno\"}]});"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "apiVersion": "app.k8s.io/v1beta1",
+  "kind": "Application",
+  "metadata": {
+    "annotations": {
+      "marketplace.cloud.google.com/deploy-info": "{\"partner_id\":\"0014M00001ppeE1QAI\",\"product_id\":\"exepno-infrastructure\",\"partner_name\":\"Bisees Information Systems\"}"
+    },
+    "name": {{ .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }}
+    }
+  },
+  "spec": {
+    "descriptor": {
+      "type": "Exepno Infrastructure",
+      "version": "3.0.1",
+      "description": "Private deployment-adapter candidate; not approved for customer release."
+    },
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/name": {{ .Release.Name | toJson }}
+      }
+    },
+    "addOwnerRef": false,
+    "componentKinds": [
+      {"group": "batch", "kind": "Job"},
+      {
+        "group": "apps",
+        "kind": "Deployment"
+      },
+      {
+        "group": "",
+        "kind": "Service"
+      },
+      {
+        "group": "",
+        "kind": "ConfigMap"
+      },
+      {
+        "group": "",
+        "kind": "PersistentVolumeClaim"
+      },
+      {
+        "group": "networking.k8s.io",
+        "kind": "NetworkPolicy"
+      }
+    ]
+  }
+}

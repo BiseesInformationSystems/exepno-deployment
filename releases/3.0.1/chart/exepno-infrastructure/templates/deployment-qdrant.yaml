@@ -1,0 +1,73 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": {{ printf "%s-qdrant" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    }
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "qdrant",
+        "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "qdrant",
+          "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+          "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "qdrant",
+            "image": {{ index .Values "components" "qdrant" "image" | toJson }},
+            "imagePullPolicy": "IfNotPresent",
+            "ports": [
+              {
+                "containerPort": 6333
+              }
+            ],
+            "resources": {{ index .Values "components" "qdrant" "resources" | toJson }},
+            "volumeMounts": [
+              {
+                "name": "qdrant-data",
+                "mountPath": "/qdrant/storage"
+              }
+            ],
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": 6333
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 3
+            }
+          }
+        ],
+        "terminationGracePeriodSeconds": 60,
+        "volumes": [
+          {
+            "name": "qdrant-data",
+            "persistentVolumeClaim": {
+              "claimName": {{ include "exepno.claimName" (dict "root" . "name" "qdrant-data") | toJson }}
+            }
+          }
+        ]
+      }
+    }
+  }
+}

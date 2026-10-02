@@ -1,0 +1,30 @@
+{
+  "version": "3.0.1",
+  "track": "3.0",
+  "status": "publicly_staged_customer_release_not_approved",
+  "recordedOn": "2026-10-02",
+  "sourceCommit": "9d5ee0789e6885f48e67800218867d9b3c0612d7",
+  "sourcePackagePath": "marketplace/releases/3.0.1/package",
+  "deployer": "gcr.io/bisees-public/exepno-infrastructure/deployer@sha256:6b75ee18c0d14690132268ed130cb97c32613447fc4909906286ce105e110881",
+  "sourceImageAssociation": "Recorded build/publication evidence supplied by the operator; not a reproducible-build certification.",
+  "applicationSourceIncluded": false,
+  "deploymentBootstrapSourceIncluded": true,
+  "configurationOnly": true,
+  "automaticSubmission": false,
+  "softwarePrice": {
+    "planId": "Terraform-Plan",
+    "metricId": "cpu_per_second",
+    "reportingUnit": "s",
+    "displayUnit": "hour",
+    "usdPerDisplayUnit": "0.0561",
+    "measurementSemanticsConfirmed": false
+  },
+  "releaseGates": {
+    "continuousCommercialReporting": "pending",
+    "finalImageSecurityAcceptance": "pending",
+    "marketplaceRemovalRetention": "pending",
+    "finalCustomerInstallationAcceptance": "pending",
+    "deploymentLicense": "MIT selected; third-party review still required",
+    "thirdPartyReview": "pending"
+  }
+}

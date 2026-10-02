@@ -1,0 +1,348 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "existingSecrets",
+    "serviceAccount",
+    "components",
+    "persistence",
+    "deployment",
+    "bootstrap",
+    "reporting"
+  ],
+  "properties": {
+    "existingSecrets": {
+      "type": "object",
+      "required": [
+        "runtime",
+        "mongoInitialization"
+      ],
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "maxLength": 253
+        },
+        "mongoInitialization": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "maxLength": 253
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "maxLength": 253
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "required": [
+        "frontend",
+        "gateway",
+        "minio",
+        "mongodb",
+        "python-backend",
+        "qdrant"
+      ],
+      "properties": {
+        "frontend": {
+          "type": "object",
+          "required": [
+            "image",
+            "resources"
+          ],
+          "properties": {
+            "image": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*|@sha256:[a-f0-9]{64})$"
+            },
+            "resources": {
+              "type": "object"
+            }
+          }
+        },
+        "gateway": {
+          "type": "object",
+          "required": [
+            "image",
+            "resources"
+          ],
+          "properties": {
+            "image": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*|@sha256:[a-f0-9]{64})$"
+            },
+            "resources": {
+              "type": "object"
+            }
+          }
+        },
+        "minio": {
+          "type": "object",
+          "required": [
+            "image",
+            "resources"
+          ],
+          "properties": {
+            "image": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*|@sha256:[a-f0-9]{64})$"
+            },
+            "resources": {
+              "type": "object"
+            }
+          }
+        },
+        "qdrant": {
+          "type": "object",
+          "required": [
+            "image",
+            "resources"
+          ],
+          "properties": {
+            "image": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*|@sha256:[a-f0-9]{64})$"
+            },
+            "resources": {
+              "type": "object"
+            }
+          }
+        },
+        "python-backend": {
+          "type": "object",
+          "required": [
+            "image",
+            "resources"
+          ],
+          "properties": {
+            "image": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*|@sha256:[a-f0-9]{64})$"
+            },
+            "resources": {
+              "type": "object"
+            }
+          }
+        },
+        "mongodb": {
+          "type": "object",
+          "required": [
+            "image",
+            "resources"
+          ],
+          "properties": {
+            "image": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*|@sha256:[a-f0-9]{64})$"
+            },
+            "resources": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "required": [
+        "minio-data",
+        "model-cache",
+        "mongo-data",
+        "qdrant-data"
+      ],
+      "properties": {
+        "mongo-data": {
+          "type": "object",
+          "required": [
+            "size",
+            "storageClass",
+            "existingClaim"
+          ],
+          "properties": {
+            "size": {
+              "type": "string",
+              "minLength": 1
+            },
+            "storageClass": {
+              "type": "string",
+              "minLength": 1
+            },
+            "existingClaim": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^$|^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "minio-data": {
+          "type": "object",
+          "required": [
+            "size",
+            "storageClass",
+            "existingClaim"
+          ],
+          "properties": {
+            "size": {
+              "type": "string",
+              "minLength": 1
+            },
+            "storageClass": {
+              "type": "string",
+              "minLength": 1
+            },
+            "existingClaim": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^$|^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "qdrant-data": {
+          "type": "object",
+          "required": [
+            "size",
+            "storageClass",
+            "existingClaim"
+          ],
+          "properties": {
+            "size": {
+              "type": "string",
+              "minLength": 1
+            },
+            "storageClass": {
+              "type": "string",
+              "minLength": 1
+            },
+            "existingClaim": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^$|^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "model-cache": {
+          "type": "object",
+          "required": [
+            "size",
+            "storageClass",
+            "existingClaim"
+          ],
+          "properties": {
+            "size": {
+              "type": "string",
+              "minLength": 1
+            },
+            "storageClass": {
+              "type": "string",
+              "minLength": 1
+            },
+            "existingClaim": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^$|^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "required": [
+        "projectId"
+      ],
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+        }
+      }
+    },
+    "bootstrap": {
+      "type": "object",
+      "required": [
+        "adminUid"
+      ],
+      "properties": {
+        "adminUid": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        }
+      }
+    },
+    "reporting": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "mode",
+        "agentImage",
+        "stateStorageClass",
+        "stateSize"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "disk_only",
+            "servicecontrol"
+          ]
+        },
+        "agentImage": {
+          "type": "string"
+        },
+        "stateStorageClass": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stateSize": {
+          "type": "string",
+          "enum": [
+            "1Gi"
+          ]
+        },
+        "reportingSecret": {
+          "type": "string",
+          "maxLength": 253,
+          "pattern": "^$|^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+        },
+        "serviceAccount": {
+          "type": "string",
+          "maxLength": 253,
+          "pattern": "^$|^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+        },
+        "liveAuthorized": {
+          "type": "boolean"
+        },
+        "measurementDefinition": {
+          "type": "string"
+        },
+        "applicationUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "commercialStateClaim": {
+          "type": "string",
+          "maxLength": 253,
+          "pattern": "^$|^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

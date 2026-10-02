@@ -1,0 +1,3 @@
+ARG DEPLOYER_BASE=gcr.io/cloud-marketplace-tools/k8s/deployer_helm/onbuild@sha256:2c7ab5995fcc7cb6729eda26c76d050c76a4593b11d7b9542f0b83fee7282abd
+FROM ${DEPLOYER_BASE}
+ENV WAIT_FOR_READY_TIMEOUT=1800

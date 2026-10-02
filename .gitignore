@@ -1,0 +1,17 @@
+.env
+.env.*
+private/
+credentials/
+test-results/
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.db
+*.log
+*.tar
+*.tar.gz
+.DS_Store
+node_modules/

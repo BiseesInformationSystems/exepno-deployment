@@ -1,0 +1,91 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": {{ printf "%s-mongodb" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    }
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "mongodb",
+        "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "mongodb",
+          "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+          "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "mongodb",
+            "image": {{ index .Values "components" "mongodb" "image" | toJson }},
+            "imagePullPolicy": "IfNotPresent",
+            "ports": [
+              {
+                "containerPort": 27017
+              }
+            ],
+            "resources": {{ index .Values "components" "mongodb" "resources" | toJson }},
+            "volumeMounts": [
+              {
+                "name": "mongo-data",
+                "mountPath": "/data/db"
+              },
+              {
+                "name": "init",
+                "mountPath": "/docker-entrypoint-initdb.d",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": 27017
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 3
+            },
+            "envFrom": [
+              {
+                "secretRef": {
+                  "name": {{ index .Values "existingSecrets" "mongoInitialization" | toJson }}
+                }
+              }
+            ]
+          }
+        ],
+        "terminationGracePeriodSeconds": 60,
+        "volumes": [
+          {
+            "name": "mongo-data",
+            "persistentVolumeClaim": {
+              "claimName": {{ include "exepno.claimName" (dict "root" . "name" "mongo-data") | toJson }}
+            }
+          },
+          {
+            "name": "init",
+            "configMap": {
+              "name": {{ printf "%s-mongo-init" .Release.Name | toJson }}
+            }
+          }
+        ]
+      }
+    }
+  }
+}

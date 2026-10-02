@@ -1,0 +1,106 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": {{ printf "%s-minio" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    }
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "minio",
+        "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "minio",
+          "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+          "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "minio",
+            "image": {{ index .Values "components" "minio" "image" | toJson }},
+            "imagePullPolicy": "IfNotPresent",
+            "ports": [
+              {
+                "containerPort": 9000
+              }
+            ],
+            "resources": {{ index .Values "components" "minio" "resources" | toJson }},
+            "args": [
+              "server",
+              "/data",
+              "--console-address",
+              ":9001"
+            ],
+            "env": [
+              {
+                "name": "MINIO_ROOT_USER",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": {{ index .Values "existingSecrets" "runtime" | toJson }},
+                    "key": "MINIO_ACCESS_KEY"
+                  }
+                }
+              },
+              {
+                "name": "MINIO_ROOT_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": {{ index .Values "existingSecrets" "runtime" | toJson }},
+                    "key": "MINIO_SECRET_KEY"
+                  }
+                }
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "minio-data",
+                "mountPath": "/data"
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "port": 9000,
+                "path": "/minio/health/ready"
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 3,
+              "failureThreshold": 6
+            }
+          }
+        ],
+        "terminationGracePeriodSeconds": 60,
+        "volumes": [
+          {
+            "name": "minio-data",
+            "persistentVolumeClaim": {
+              "claimName": {{ include "exepno.claimName" (dict "root" . "name" "minio-data") | toJson }}
+            }
+          }
+        ],
+        "securityContext": {
+          "runAsUser": 1000,
+          "runAsGroup": 1000,
+          "fsGroup": 1000
+        }
+      }
+    }
+  }
+}

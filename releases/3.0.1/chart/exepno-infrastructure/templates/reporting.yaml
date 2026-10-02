@@ -1,0 +1,162 @@
+{{- if and .Values.reporting.enabled (eq .Values.reporting.mode "disk_only") }}
+{{- if ne .Values.reporting.mode "disk_only" }}{{ fail "Only disk_only is implemented" }}{{ end }}
+{{- if not (regexMatch "^.+@sha256:[a-f0-9]{64}$" .Values.reporting.agentImage) }}
+{{- fail "Supply the published digest of the tested UBB agent" }}
+{{- end }}
+{{- $name := printf "%s-meter" .Release.Name }}
+{{- $code := printf "%s-code-%s" $name ((.Files.Glob "files/reporting/*").AsConfig | sha256sum | trunc 8) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-state
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/resource-policy: keep
+    exepno.bisees.com/storage-purpose: reporting-state
+spec:
+  accessModes: ["ReadWriteOncePod"]
+  storageClassName: {{ .Values.reporting.stateStorageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.reporting.stateSize | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $code }}
+  namespace: {{ .Release.Namespace }}
+immutable: true
+data:
+{{ (.Files.Glob "files/reporting/*").AsConfig | indent 2 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      exepno.bisees.com/meter-for: {{ .Release.Name | quote }}
+  policyTypes: ["Ingress"]
+  ingress: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      exepno.bisees.com/meter-for: {{ .Release.Name | quote }}
+  template:
+    metadata:
+      labels:
+        exepno.bisees.com/meter-for: {{ .Release.Name | quote }}
+        app.kubernetes.io/component: disk-meter-test
+    spec:
+      serviceAccountName: {{ required "reporting.serviceAccount is required when reporting is enabled" .Values.reporting.serviceAccount | quote }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 90
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: validate-paired-state
+          image: {{ index .Values.components "python-backend" "image" | quote }}
+          command:
+            - /opt/venv/bin/python
+            - /code/kubernetes_disk_collector.py
+            - init
+          env: &collectorEnv
+            - name: EXEPNO_REPORTING_MODE
+              value: disk_only
+            - name: EXEPNO_INSTANCE
+              value: {{ .Release.Name | quote }}
+            - name: EXEPNO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: EXEPNO_AGENT_IMAGE
+              value: {{ .Values.reporting.agentImage | quote }}
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+          securityContext: &restricted
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+          volumeMounts:
+            - {name: code, mountPath: /code, readOnly: true}
+            - {name: state, mountPath: /data}
+      containers:
+        - name: collector
+          image: {{ index .Values.components "python-backend" "image" | quote }}
+          command: ["/opt/venv/bin/python", "-u", "/code/kubernetes_disk_collector.py"]
+          env: *collectorEnv
+          securityContext: *restricted
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          volumeMounts:
+            - {name: code, mountPath: /code, readOnly: true}
+            - {name: state, mountPath: /data}
+            - {name: api-identity, mountPath: /var/run/exepno-api, readOnly: true}
+        - name: agent
+          image: {{ .Values.reporting.agentImage | quote }}
+          command: ["/usr/local/bin/ubbagent"]
+          args:
+            - --config=/code/agent.yaml
+            - --state-dir=/state
+            - --local-port=3456
+            - --logtostderr
+          securityContext: *restricted
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 256Mi}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - "kill -INT 1; i=0; while kill -0 1 2>/dev/null && [ $i -lt 25 ]; do sleep 1; i=$((i+1)); done"
+          volumeMounts:
+            - {name: code, mountPath: /code, readOnly: true}
+            - {name: state, mountPath: /state, subPath: agent}
+            - {name: state, mountPath: /reports, subPath: reports}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: code
+          configMap:
+            name: {{ $code }}
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ $name }}-state
+        - name: tmp
+          emptyDir:
+            sizeLimit: 32Mi
+        - name: api-identity
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+{{- end }}

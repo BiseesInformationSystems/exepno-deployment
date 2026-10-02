@@ -1,0 +1,9 @@
+*
+!Dockerfile
+!schema.yaml
+!chart/
+!chart/**
+**/.env
+**/.env.*
+**/*.key
+**/*.pem

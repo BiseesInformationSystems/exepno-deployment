@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "exepno.bootstrapConfig" . | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+immutable: true
+data:
+  contract.cjs: |
+{{ .Files.Get "files/bootstrap/contract.cjs" | indent 4 }}
+  run.cjs: |
+{{ .Files.Get "files/bootstrap/run.cjs" | indent 4 }}
+  wait.cjs: |
+{{ .Files.Get "files/bootstrap/wait.cjs" | indent 4 }}

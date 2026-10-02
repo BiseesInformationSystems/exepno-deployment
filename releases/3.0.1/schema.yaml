@@ -1,0 +1,247 @@
+{
+  "x-google-marketplace": {
+    "schemaVersion": "v2",
+    "applicationApiVersion": "v1beta1",
+    "publishedVersion": "3.0.1",
+    "publishedVersionMetadata": {
+      "releaseNote": "Release preparation: commercial reporting and acceptance checks pending."
+    },
+    "images": {
+      "": {
+        "properties": {
+          "components.frontend.image": {
+            "type": "FULL"
+          }
+        }
+      },
+      "gateway": {
+        "properties": {
+          "components.gateway.image": {
+            "type": "FULL"
+          }
+        }
+      },
+      "minio": {
+        "properties": {
+          "components.minio.image": {
+            "type": "FULL"
+          }
+        }
+      },
+      "mongodb": {
+        "properties": {
+          "components.mongodb.image": {
+            "type": "FULL"
+          }
+        }
+      },
+      "backend": {
+        "properties": {
+          "components.python-backend.image": {
+            "type": "FULL"
+          }
+        }
+      },
+      "qdrant": {
+        "properties": {
+          "components.qdrant.image": {
+            "type": "FULL"
+          }
+        }
+      },
+      "ubb-agent": {
+        "properties": {
+          "reporting.agentImage": {
+            "type": "FULL"
+          }
+        }
+      }
+    },
+    "partnerId": "0014M00001ppeE1QAI",
+    "solutionId": "exepno-infrastructure"
+  },
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 40,
+      "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$",
+      "x-google-marketplace": {
+        "type": "NAME"
+      }
+    },
+    "namespace": {
+      "type": "string",
+      "x-google-marketplace": {
+        "type": "NAMESPACE"
+      }
+    },
+    "existingSecrets.runtime": {
+      "type": "string",
+      "description": "Existing namespace-local Exepno runtime Secret. See prerequisite setup."
+    },
+    "existingSecrets.mongoInitialization": {
+      "type": "string",
+      "description": "Existing Mongo initialization Secret; passwords must agree with the runtime URI."
+    },
+    "serviceAccount.name": {
+      "type": "string",
+      "description": "Existing namespace-local Kubernetes service account with customer-configured Google workload identity."
+    },
+    "persistence.minio-data.size": {
+      "type": "string",
+      "default": "10Gi"
+    },
+    "persistence.minio-data.storageClass": {
+      "type": "string",
+      "default": "standard-rwo"
+    },
+    "persistence.minio-data.existingClaim": {
+      "type": "string",
+      "default": ""
+    },
+    "persistence.model-cache.size": {
+      "type": "string",
+      "default": "20Gi"
+    },
+    "persistence.model-cache.storageClass": {
+      "type": "string",
+      "default": "standard-rwo"
+    },
+    "persistence.model-cache.existingClaim": {
+      "type": "string",
+      "default": ""
+    },
+    "persistence.mongo-data.size": {
+      "type": "string",
+      "default": "10Gi"
+    },
+    "persistence.mongo-data.storageClass": {
+      "type": "string",
+      "default": "standard-rwo"
+    },
+    "persistence.mongo-data.existingClaim": {
+      "type": "string",
+      "default": ""
+    },
+    "persistence.qdrant-data.size": {
+      "type": "string",
+      "default": "10Gi"
+    },
+    "persistence.qdrant-data.storageClass": {
+      "type": "string",
+      "default": "standard-rwo"
+    },
+    "persistence.qdrant-data.existingClaim": {
+      "type": "string",
+      "default": ""
+    },
+    "deployment.projectId": {
+      "type": "string",
+      "title": "Customer Google Cloud project ID",
+      "description": "Must match the cluster project and the configured authentication project.",
+      "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+    },
+    "bootstrap.adminUid": {
+      "type": "string",
+      "title": "Existing Google UID for the first Exepno administrator",
+      "description": "Explicit administrator authorization. Existing non-admin accounts are not promoted.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "reporting.enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Engineering disk-only meter. Does not submit commercial usage."
+    },
+    "reporting.mode": {
+      "type": "string",
+      "enum": [
+        "disk_only",
+        "servicecontrol"
+      ],
+      "default": "disk_only"
+    },
+    "reporting.reportingSecret": {
+      "type": "string",
+      "title": "Marketplace usage-reporting Secret",
+      "description": "Marketplace reporting credentials, not model-provider credentials. Unused by the currently disabled disk-only reporting implementation.",
+      "x-google-marketplace": {
+        "type": "REPORTING_SECRET"
+      }
+    },
+    "reporting.serviceAccount": {
+      "type": "string",
+      "title": "CPU reporting service account",
+      "x-google-marketplace": {
+        "type": "SERVICE_ACCOUNT",
+        "serviceAccount": {
+          "description": "Reads Deployments, ReplicaSets and Pods in the installation namespace to identify the selected application workloads. Cannot read Secrets or create, update or delete resources.",
+          "roles": [
+            {
+              "type": "Role",
+              "rulesType": "CUSTOM",
+              "rules": [
+                {
+                  "apiGroups": [
+                    "apps"
+                  ],
+                  "resources": [
+                    "deployments",
+                    "replicasets"
+                  ],
+                  "verbs": [
+                    "get",
+                    "list"
+                  ]
+                },
+                {
+                  "apiGroups": [
+                    ""
+                  ],
+                  "resources": [
+                    "pods"
+                  ],
+                  "verbs": [
+                    "get",
+                    "list"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "reporting.liveAuthorized": {
+      "type": "boolean",
+      "default": false,
+      "description": "Explicit operator authorization. May incur software usage charges."
+    },
+    "reporting.measurementDefinition": {
+      "type": "string",
+      "default": "",
+      "description": "Must match the externally confirmed billable CPU definition."
+    },
+    "reporting.applicationUid": {
+      "type": "string",
+      "x-google-marketplace": {
+        "type": "APPLICATION_UID"
+      }
+    },
+    "reporting.commercialStateClaim": {
+      "type": "string",
+      "default": "",
+      "description": "Dedicated retained ReadWriteOncePod state claim; never the disk-test claim."
+    }
+  },
+  "required": [
+    "name",
+    "namespace",
+    "existingSecrets.runtime",
+    "existingSecrets.mongoInitialization",
+    "serviceAccount.name",
+    "deployment.projectId",
+    "bootstrap.adminUid",
+    "reporting.serviceAccount"
+  ]
+}

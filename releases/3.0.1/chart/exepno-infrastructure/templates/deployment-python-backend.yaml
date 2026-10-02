@@ -1,0 +1,154 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": {{ printf "%s-python-backend" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    }
+  },
+  "spec": {
+    "replicas": 1,
+    "strategy": {
+      "type": "Recreate"
+    },
+    "selector": {
+      "matchLabels": {
+        "app": "python-backend",
+        "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "python-backend",
+          "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+          "app.kubernetes.io/instance": {{ .Release.Name | toJson }}
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "python-backend",
+            "image": {{ index .Values "components" "python-backend" "image" | toJson }},
+            "imagePullPolicy": "IfNotPresent",
+            "ports": [
+              {
+                "containerPort": 8000
+              }
+            ],
+            "resources": {{ index .Values "components" "python-backend" "resources" | toJson }},
+            "command": [
+              "/opt/venv/bin/python",
+              "-u",
+              "/bootstrap/start.py"
+            ],
+            "envFrom": [
+              {
+                "secretRef": {
+                  "name": {{ index .Values "existingSecrets" "runtime" | toJson }}
+                }
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "model-cache",
+                "mountPath": "/app/cache"
+              },
+              {
+                "name": "scratch",
+                "mountPath": "/work"
+              },
+              {
+                "name": "scratch",
+                "mountPath": "/tmp"
+              },
+              {
+                "name": "scratch",
+                "mountPath": "/app/temp"
+              },
+              {
+                "name": "scratch",
+                "mountPath": "/app/output"
+              },
+              {
+                "name": "scratch",
+                "mountPath": "/app/logs"
+              },
+              {
+                "name": "bootstrap",
+                "mountPath": "/bootstrap",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "port": 8000,
+                "path": "/"
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 3,
+              "failureThreshold": 6
+            },
+            "workingDir": "/work",
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "env": [
+              {
+                "name": "MINIO_ENDPOINT",
+                "value": {{ printf "%s-minio" .Release.Name | toJson }}
+              },
+              {
+                "name": "QDRANT_HOST",
+                "value": {{ printf "%s-qdrant" .Release.Name | toJson }}
+              }
+            ]
+          }
+        ],
+        "terminationGracePeriodSeconds": 60,
+        "volumes": [
+          {
+            "name": "model-cache",
+            "persistentVolumeClaim": {
+              "claimName": {{ include "exepno.claimName" (dict "root" . "name" "model-cache") | toJson }}
+            }
+          },
+          {
+            "name": "scratch",
+            "emptyDir": {
+              "sizeLimit": "2Gi"
+            }
+          },
+          {
+            "name": "bootstrap",
+            "configMap": {
+              "name": {{ printf "%s-backend-bootstrap" .Release.Name | toJson }}
+            }
+          }
+        ],
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 65534,
+          "runAsGroup": 65534,
+          "fsGroup": 65534,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "serviceAccountName": {{ index .Values "serviceAccount" "name" | toJson }}
+      }
+    }
+  }
+}

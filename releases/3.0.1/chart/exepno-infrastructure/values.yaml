@@ -1,0 +1,114 @@
+{
+  "existingSecrets": {
+    "runtime": "",
+    "mongoInitialization": ""
+  },
+  "serviceAccount": {
+    "name": ""
+  },
+  "components": {
+    "mongodb": {
+      "image": "gcr.io/bisees-public/exepno-infrastructure/mongodb:3.0.1",
+      "resources": {
+        "requests": {
+          "cpu": "250m",
+          "memory": "512Mi"
+        }
+      }
+    },
+    "minio": {
+      "image": "gcr.io/bisees-public/exepno-infrastructure/minio:3.0.1",
+      "resources": {
+        "requests": {
+          "cpu": "250m",
+          "memory": "512Mi"
+        }
+      }
+    },
+    "qdrant": {
+      "image": "gcr.io/bisees-public/exepno-infrastructure/qdrant:3.0.1",
+      "resources": {
+        "requests": {
+          "cpu": "250m",
+          "memory": "512Mi"
+        }
+      }
+    },
+    "python-backend": {
+      "image": "gcr.io/bisees-public/exepno-infrastructure/backend:3.0.1",
+      "resources": {
+        "requests": {
+          "cpu": "2",
+          "memory": "6Gi"
+        },
+        "limits": {
+          "memory": "14Gi",
+          "cpu": "6"
+        }
+      }
+    },
+    "frontend": {
+      "image": "gcr.io/bisees-public/exepno-infrastructure:3.0.1",
+      "resources": {
+        "requests": {
+          "cpu": "250m",
+          "memory": "512Mi"
+        },
+        "limits": {
+          "memory": "2Gi",
+          "cpu": "2"
+        }
+      }
+    },
+    "gateway": {
+      "image": "gcr.io/bisees-public/exepno-infrastructure/gateway:3.0.1",
+      "resources": {
+        "requests": {
+          "cpu": "50m",
+          "memory": "64Mi"
+        }
+      }
+    }
+  },
+  "persistence": {
+    "mongo-data": {
+      "size": "10Gi",
+      "storageClass": "standard-rwo",
+      "existingClaim": ""
+    },
+    "minio-data": {
+      "size": "10Gi",
+      "storageClass": "standard-rwo",
+      "existingClaim": ""
+    },
+    "qdrant-data": {
+      "size": "10Gi",
+      "storageClass": "standard-rwo",
+      "existingClaim": ""
+    },
+    "model-cache": {
+      "size": "20Gi",
+      "storageClass": "standard-rwo",
+      "existingClaim": ""
+    }
+  },
+  "deployment": {
+    "projectId": ""
+  },
+  "bootstrap": {
+    "adminUid": ""
+  },
+  "reporting": {
+    "enabled": false,
+    "mode": "disk_only",
+    "agentImage": "",
+    "stateStorageClass": "standard-rwo",
+    "stateSize": "1Gi",
+    "reportingSecret": "",
+    "serviceAccount": "",
+    "liveAuthorized": false,
+    "measurementDefinition": "",
+    "applicationUid": "",
+    "commercialStateClaim": ""
+  }
+}

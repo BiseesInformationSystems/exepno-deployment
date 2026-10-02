@@ -1,0 +1,10 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-init-%s" .Release.Name (include "exepno.bootstrapJobSpec" . | sha256sum | trunc 12) | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+spec:
+{{ include "exepno.bootstrapJobSpec" . | indent 2 }}

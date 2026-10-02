@@ -1,0 +1,168 @@
+{{- if and .Values.reporting.enabled (eq .Values.reporting.mode "servicecontrol") }}
+{{- if not .Values.reporting.liveAuthorized }}{{ fail "Commercial reporting requires explicit authorization" }}{{ end }}
+{{- if ne .Values.reporting.measurementDefinition "requested_cpu_running_regular_containers_v1" }}{{ fail "Unsupported or unconfirmed measurement selection" }}{{ end }}
+{{- $secret := required "Marketplace reporting Secret is required" .Values.reporting.reportingSecret }}
+{{- $sa := required "Reporting service account is required" .Values.reporting.serviceAccount }}
+{{- $uid := required "Application UID is required" .Values.reporting.applicationUid }}
+{{- $claim := required "Dedicated commercial reporting state claim is required" .Values.reporting.commercialStateClaim }}
+{{- if eq $claim (printf "%s-meter-state" .Release.Name) }}{{ fail "Do not reuse disk-test state for commercial reporting" }}{{ end }}
+{{- range $name, $storage := .Values.persistence }}
+{{- if or (eq $claim (printf "%s-%s" $.Release.Name $name)) (and $storage.existingClaim (eq $claim $storage.existingClaim)) }}
+{{- fail "Do not use application data claims for reporting state" }}
+{{- end }}
+{{- end }}
+{{- $agent := required "Reporting agent image is required" .Values.reporting.agentImage }}
+{{- $name := printf "%s-billing" .Release.Name }}
+{{- $code := printf "%s-code-%s" $name ((.Files.Glob "files/reporting/*").AsConfig | sha256sum | trunc 8) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $code }}
+  namespace: {{ .Release.Namespace }}
+immutable: true
+data:
+{{ (.Files.Glob "files/reporting/*").AsConfig | indent 2 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      exepno.bisees.com/billing-for: {{ .Release.Name | quote }}
+  policyTypes: ["Ingress"]
+  ingress: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      exepno.bisees.com/billing-for: {{ .Release.Name | quote }}
+  template:
+    metadata:
+      labels:
+        exepno.bisees.com/billing-for: {{ .Release.Name | quote }}
+        app.kubernetes.io/component: billing
+    spec:
+      serviceAccountName: {{ $sa | quote }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 90
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: prepare-private-config
+          image: {{ index .Values.components "python-backend" "image" | quote }}
+          command: ["/opt/venv/bin/python", "/code/commercial_runtime.py", "init"]
+          env: &billingEnv
+            - name: EXEPNO_COMMERCIAL_REPORTING_AUTHORIZED
+              value: "true"
+            - name: EXEPNO_CPU_MEASUREMENT_DEFINITION
+              value: {{ .Values.reporting.measurementDefinition | quote }}
+            - name: EXEPNO_CUSTOMER_PROJECT
+              value: {{ .Values.deployment.projectId | quote }}
+            - name: EXEPNO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: EXEPNO_INSTANCE
+              value: {{ .Release.Name | quote }}
+            - name: EXEPNO_APPLICATION_UID
+              value: {{ $uid | quote }}
+            - name: EXEPNO_AGENT_IMAGE
+              value: {{ $agent | quote }}
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+          securityContext: &restricted
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+          volumeMounts:
+            - {name: code, mountPath: /code, readOnly: true}
+            - {name: state, mountPath: /billing-state}
+            - {name: reporting-secret, mountPath: /run/exepno-reporting-secret, readOnly: true}
+            - {name: agent-config, mountPath: /run/exepno-agent-config}
+      containers:
+        - name: collector
+          image: {{ index .Values.components "python-backend" "image" | quote }}
+          command: ["/opt/venv/bin/python", "-u", "/code/commercial_runtime.py"]
+          env: *billingEnv
+          securityContext: *restricted
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          volumeMounts:
+            - {name: code, mountPath: /code, readOnly: true}
+            - {name: state, mountPath: /billing-state}
+            - {name: api-identity, mountPath: /var/run/exepno-api, readOnly: true}
+        - name: agent
+          image: {{ $agent | quote }}
+          command: ["/usr/local/bin/ubbagent"]
+          args:
+            - --config=/run/exepno-agent-config/agent-config.yaml
+            - --state-dir=/state
+            - --local-port=3456
+            - --logtostderr
+          securityContext: *restricted
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 256Mi}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "kill -INT 1; i=0; while kill -0 1 2>/dev/null && [ $i -lt 25 ]; do sleep 1; i=$((i+1)); done"]
+          volumeMounts:
+            - {name: state, mountPath: /state, subPath: agent}
+            - {name: agent-config, mountPath: /run/exepno-agent-config, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: code
+          configMap:
+            name: {{ $code }}
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ $claim | quote }}
+        - name: reporting-secret
+          secret:
+            secretName: {{ $secret | quote }}
+            defaultMode: 0440
+            items:
+              - {key: entitlement-id, path: entitlement-id}
+              - {key: consumer-id, path: consumer-id}
+              - {key: reporting-key, path: reporting-key}
+        - name: agent-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 32Mi
+        - name: api-identity
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - {key: ca.crt, path: ca.crt}
+{{- end }}

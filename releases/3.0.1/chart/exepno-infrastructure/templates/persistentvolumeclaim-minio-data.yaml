@@ -1,0 +1,31 @@
+{{- if not (index .Values.persistence "minio-data" "existingClaim") }}
+{
+  "apiVersion": "v1",
+  "kind": "PersistentVolumeClaim",
+  "metadata": {
+    "name": {{ printf "%s-minio-data" .Release.Name | toJson }},
+    "namespace": {{ .Release.Namespace | toJson }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/instance": {{ .Release.Name | toJson }},
+      "app.kubernetes.io/part-of": "exepno-performance",
+      "app.kubernetes.io/managed-by": {{ .Release.Service | toJson }}
+    },
+    "annotations": {
+      "helm.sh/resource-policy": "keep",
+      "exepno.bisees.com/storage-lifecycle": "v1"
+    }
+  },
+  "spec": {
+    "accessModes": [
+      "ReadWriteOnce"
+    ],
+    "storageClassName": {{ index .Values "persistence" "minio-data" "storageClass" | toJson }},
+    "resources": {
+      "requests": {
+        "storage": {{ index .Values "persistence" "minio-data" "size" | toJson }}
+      }
+    }
+  }
+}
+{{- end }}
